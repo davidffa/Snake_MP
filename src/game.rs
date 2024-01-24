@@ -1,6 +1,11 @@
 use std::collections::VecDeque;
 
-use crate::util::Point;
+use rand::{rngs::ThreadRng, Rng};
+
+use crate::{renderer::SCALE, util::Point, WINDOW_HEIGHT, WINDOW_WIDTH};
+
+const WIDTH: u32 = WINDOW_WIDTH / SCALE;
+const HEIGHT: u32 = WINDOW_HEIGHT / SCALE;
 
 #[derive(PartialEq)]
 enum Direction {
@@ -37,7 +42,6 @@ impl Snake {
             Direction::Left => head + Point(-1, 0),
         };
 
-        self.position.pop_front();
         self.position.push_back(next_head);
     }
 
@@ -69,6 +73,7 @@ impl Snake {
 pub struct GameContext {
     pub snake: Snake,
     pub food: Point,
+    rng: ThreadRng,
 }
 
 impl GameContext {
@@ -76,10 +81,33 @@ impl GameContext {
         GameContext {
             snake: Snake::default(),
             food: Point(10, 4),
+            rng: rand::thread_rng(),
         }
     }
 
     pub fn update(&mut self) {
         self.snake.update_pos();
+
+        let snake_head = *self.snake.position.back().unwrap();
+
+        if snake_head == self.food {
+            self.spawn_food();
+        } else {
+            self.snake.position.pop_front();
+        }
+    }
+
+    fn spawn_food(&mut self) {
+        let x = self.rng.gen_range(0..WIDTH) as i32;
+        let y = self.rng.gen_range(0..HEIGHT) as i32;
+
+        let new_food = Point(x, y);
+
+        if self.snake.position.contains(&new_food) {
+            self.spawn_food();
+            return;
+        }
+
+        self.food = new_food;
     }
 }

@@ -1,6 +1,6 @@
 use std::ops::Add;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Point(pub i32, pub i32);
 
 impl Add<Point> for Point {

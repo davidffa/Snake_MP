@@ -6,7 +6,7 @@ const BG_COLOR: Color = Color::RGB(24, 24, 24);
 const FOOD_COLOR: Color = Color::RED;
 const SNAKE_COLOR: Color = Color::BLUE;
 
-const SCALE: u32 = 12;
+pub const SCALE: u32 = 10;
 
 pub struct Renderer {
     canvas: WindowCanvas,
