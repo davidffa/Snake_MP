@@ -4,8 +4,8 @@ use rand::{rngs::ThreadRng, Rng};
 
 use crate::{renderer::SCALE, util::Point, WINDOW_HEIGHT, WINDOW_WIDTH};
 
-const WIDTH: u32 = WINDOW_WIDTH / SCALE;
-const HEIGHT: u32 = WINDOW_HEIGHT / SCALE;
+const WIDTH: i32 = (WINDOW_WIDTH / SCALE) as i32;
+const HEIGHT: i32 = (WINDOW_HEIGHT / SCALE) as i32;
 
 #[derive(PartialEq)]
 enum Direction {
@@ -35,11 +35,19 @@ impl Snake {
     pub fn update_pos(&mut self) {
         let head = *self.position.back().unwrap();
 
-        let next_head = match self.direction {
+        let mut next_head = match self.direction {
             Direction::Up => head + Point(0, -1),
             Direction::Down => head + Point(0, 1),
             Direction::Right => head + Point(1, 0),
             Direction::Left => head + Point(-1, 0),
+        };
+
+        match next_head {
+            Point(-1, _) => next_head.0 = WIDTH - 1,
+            Point(WIDTH, _) => next_head.0 = 0,
+            Point(_, -1) => next_head.1 = HEIGHT - 1,
+            Point(_, HEIGHT) => next_head.1 = 0,
+            _ => {}
         };
 
         self.position.push_back(next_head);
@@ -98,8 +106,8 @@ impl GameContext {
     }
 
     fn spawn_food(&mut self) {
-        let x = self.rng.gen_range(0..WIDTH) as i32;
-        let y = self.rng.gen_range(0..HEIGHT) as i32;
+        let x = self.rng.gen_range(0..WIDTH);
+        let y = self.rng.gen_range(0..HEIGHT);
 
         let new_food = Point(x, y);
 
