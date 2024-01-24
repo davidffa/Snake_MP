@@ -5,6 +5,7 @@ use crate::{game::GameContext, util::Point};
 const BG_COLOR: Color = Color::RGB(24, 24, 24);
 const FOOD_COLOR: Color = Color::RED;
 const SNAKE_COLOR: Color = Color::BLUE;
+const SNAKE_HEAD_COLOR: Color = Color::CYAN;
 
 pub const SCALE: u32 = 10;
 
@@ -39,9 +40,12 @@ impl Renderer {
 
         // Snake(s)
         self.canvas.set_draw_color(SNAKE_COLOR);
-        for point in context.snake.position.iter() {
+        for point in context.snake.body.iter() {
             self.draw_point(point)?;
         }
+
+        self.canvas.set_draw_color(SNAKE_HEAD_COLOR);
+        self.draw_point(&context.snake.head)?;
 
         // Food
         self.canvas.set_draw_color(FOOD_COLOR);

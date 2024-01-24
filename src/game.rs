@@ -7,8 +7,8 @@ use crate::{renderer::SCALE, util::Point, WINDOW_HEIGHT, WINDOW_WIDTH};
 const WIDTH: i32 = (WINDOW_WIDTH / SCALE) as i32;
 const HEIGHT: i32 = (WINDOW_HEIGHT / SCALE) as i32;
 
-#[derive(PartialEq)]
-enum Direction {
+#[derive(Clone, Copy, PartialEq)]
+pub enum Direction {
     Up,
     Down,
     Left,
@@ -16,24 +16,25 @@ enum Direction {
 }
 
 pub struct Snake {
-    pub position: VecDeque<Point>,
+    pub body: VecDeque<Point>,
+    pub head: Point,
     direction: Direction,
 }
 
 impl Snake {
     pub fn default() -> Self {
-        let mut position = VecDeque::new();
-        position.push_back(Point(2, 3));
-        position.push_back(Point(3, 3));
+        let mut body = VecDeque::new();
+        body.push_back(Point(2, 3));
 
         Snake {
-            position,
+            body,
+            head: Point(3, 3),
             direction: Direction::Right,
         }
     }
 
-    pub fn update_pos(&mut self) {
-        let head = *self.position.back().unwrap();
+    pub fn update_head(&mut self) {
+        let head = self.head;
 
         let mut next_head = match self.direction {
             Direction::Up => head + Point(0, -1),
@@ -50,30 +51,23 @@ impl Snake {
             _ => {}
         };
 
-        self.position.push_back(next_head);
+        self.body.push_back(self.head);
+        self.head = next_head;
     }
 
-    pub fn move_up(&mut self) {
-        if self.direction != Direction::Down {
-            self.direction = Direction::Up;
+    pub fn change_direction(&mut self, direction: Direction) {
+        if self.direction == direction {
+            return;
         }
-    }
 
-    pub fn move_down(&mut self) {
-        if self.direction != Direction::Up {
-            self.direction = Direction::Down;
-        }
-    }
+        let old_dir = self.direction;
 
-    pub fn move_left(&mut self) {
-        if self.direction != Direction::Right {
-            self.direction = Direction::Left;
-        }
-    }
-
-    pub fn move_right(&mut self) {
-        if self.direction != Direction::Left {
-            self.direction = Direction::Right;
+        if (old_dir == Direction::Up && direction != Direction::Down)
+            || (old_dir == Direction::Down && direction != Direction::Up)
+            || (old_dir == Direction::Left && direction != Direction::Right)
+            || (old_dir == Direction::Right && direction != Direction::Left)
+        {
+            self.direction = direction;
         }
     }
 }
@@ -93,15 +87,16 @@ impl GameContext {
         }
     }
 
-    pub fn update(&mut self) {
-        self.snake.update_pos();
+    pub fn update(&mut self, direction: Direction) {
+        self.snake.change_direction(direction);
+        self.snake.update_head();
 
-        let snake_head = *self.snake.position.back().unwrap();
+        let snake_head = self.snake.head;
 
         if snake_head == self.food {
             self.spawn_food();
         } else {
-            self.snake.position.pop_front();
+            self.snake.body.pop_front();
         }
     }
 
@@ -111,7 +106,7 @@ impl GameContext {
 
         let new_food = Point(x, y);
 
-        if self.snake.position.contains(&new_food) {
+        if self.snake.body.contains(&new_food) {
             self.spawn_food();
             return;
         }

@@ -4,7 +4,7 @@ mod util;
 
 use std::{thread::sleep, time::Duration};
 
-use game::GameContext;
+use game::{Direction, GameContext};
 use renderer::Renderer;
 use sdl2::{event::Event, keyboard::Keycode};
 
@@ -30,6 +30,8 @@ fn main() -> Result<(), ()> {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
+    let mut next_direction = Direction::Right;
+
     'running: loop {
         for event in event_pump.poll_iter() {
             match event {
@@ -41,18 +43,20 @@ fn main() -> Result<(), ()> {
                 Event::KeyDown {
                     keycode: Some(keycode),
                     ..
-                } => match keycode {
-                    Keycode::W => context.snake.move_up(),
-                    Keycode::A => context.snake.move_left(),
-                    Keycode::S => context.snake.move_down(),
-                    Keycode::D => context.snake.move_right(),
-                    _ => {}
-                },
+                } => {
+                    next_direction = match keycode {
+                        Keycode::W | Keycode::Up => Direction::Up,
+                        Keycode::A | Keycode::Left => Direction::Left,
+                        Keycode::S | Keycode::Down => Direction::Down,
+                        Keycode::D | Keycode::Right => Direction::Right,
+                        _ => next_direction,
+                    }
+                }
                 _ => {}
             }
         }
 
-        context.update();
+        context.update(next_direction);
 
         renderer
             .render(&context)
