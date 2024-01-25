@@ -1,0 +1,12 @@
+[package]
+name = "snake_mp_client"
+version = "0.1.0"
+edition = "2021"
+authors = ["David Amorim"]
+default-run = "snake_mp_client"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rand = "0.8.5"
+sdl2 = "0.36.0"

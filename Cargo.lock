@@ -97,11 +97,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "snake_mp"
+name = "snake_mp_client"
 version = "0.1.0"
 dependencies = [
  "rand",
  "sdl2",
+]
+
+[[package]]
+name = "snake_mp_server"
+version = "0.1.0"
+dependencies = [
+ "rand",
 ]
 
 [[package]]
