@@ -1,9 +1,9 @@
 [package]
-name = "snake_mp_client"
+name = "client"
 version = "0.1.0"
 edition = "2021"
 authors = ["David Amorim"]
-default-run = "snake_mp_client"
+default-run = "client"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

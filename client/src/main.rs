@@ -5,11 +5,8 @@ mod util;
 use std::{thread::sleep, time::Duration};
 
 use game::{Direction, GameContext};
-use renderer::Renderer;
+use renderer::{Renderer, WINDOW_HEIGHT, WINDOW_WIDTH};
 use sdl2::{event::Event, keyboard::Keycode};
-
-const WINDOW_WIDTH: u32 = 800;
-const WINDOW_HEIGHT: u32 = 600;
 
 const FPS: u32 = 20;
 

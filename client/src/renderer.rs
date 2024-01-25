@@ -7,6 +7,8 @@ const FOOD_COLOR: Color = Color::RED;
 const SNAKE_COLOR: Color = Color::BLUE;
 const SNAKE_HEAD_COLOR: Color = Color::CYAN;
 
+pub const WINDOW_WIDTH: u32 = 800;
+pub const WINDOW_HEIGHT: u32 = 600;
 pub const SCALE: u32 = 10;
 
 pub struct Renderer {
