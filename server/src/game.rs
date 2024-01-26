@@ -3,10 +3,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use rand::{
-    rngs::{OsRng, StdRng},
-    Rng, SeedableRng,
-};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::util::Point;
 
@@ -75,6 +72,39 @@ impl GameContext {
         }
     }
 
+    pub fn spawn_snake(&mut self, snake_id: u8) {
+        let mut occupied_points = Vec::new();
+
+        occupied_points.push(self.food);
+
+        for snake in self.snakes.values() {
+            for pos in snake.body.iter() {
+                occupied_points.push(*pos);
+            }
+
+            occupied_points.push(snake.head);
+        }
+
+        let mut p1 = Point(self.rng.gen_range(0..WIDTH), self.rng.gen_range(0..HEIGHT));
+        let mut p2 = Point(p1.0 + 1, p1.1);
+
+        while occupied_points.contains(&p1) || occupied_points.contains(&p2) {
+            p1 = Point(self.rng.gen_range(0..WIDTH), self.rng.gen_range(0..HEIGHT));
+            p2 = Point(p1.0 + 1, p1.1);
+        }
+
+        let mut body = VecDeque::new();
+        body.push_back(p2);
+
+        let snake = Snake {
+            head: p1,
+            body,
+            direction: Direction::Right,
+        };
+
+        self.snakes.insert(snake_id, snake);
+    }
+
     pub fn update(&mut self) {
         if self.snakes.is_empty() {
             return;
@@ -82,15 +112,21 @@ impl GameContext {
 
         self.snakes.values_mut().for_each(Snake::update_head);
 
-        // TODO: Handle snake updating
+        let snakes = self.snakes.values_mut();
 
-        // let snake_head = self.snake.head;
+        let mut food_eaten = false;
 
-        // if snake_head == self.food {
-        //     self.spawn_food();
-        // } else {
-        //     self.snake.body.pop_front();
-        // }
+        for snake in snakes {
+            if snake.head != self.food {
+                snake.body.pop_front();
+            } else {
+                food_eaten = true;
+            }
+        }
+
+        if food_eaten {
+            self.spawn_food();
+        }
     }
 
     fn spawn_food(&mut self) {

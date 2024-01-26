@@ -12,6 +12,11 @@ The server sends this packet to a newly connected client, indicating its snake I
 |----------|---------------------------------|---------|
 | Type     | Packet type value = 0x1         | 1 byte  |
 | YourID   | Your snake identifier           | 1 byte  |
+| Size     | Your snake size                 | 1 byte  |
+| PointX   | x coordinate                    | 1 byte  |
+| PointY   | y coordinate                    | 1 byte  |
+| PointX   | x coordinate                    | 1 byte  |
+| PointY   | y coordinate                    | 1 byte  |
 | ID       | Snake identifier or food (0xff) | 1 byte  |
 | Size     | Coord sequence size (LSB)       | 2 bytes |
 | PointX   | x coordinate                    | 1 byte  |
@@ -39,9 +44,9 @@ The client sends this packet to inform a direction update.
 | Type      | Packet type value = 0x3   | 1 byte  |
 | Direction | The direction             | 1 byte  |
 
-### Snakes direction update
+### Snakes head update
 
-The server broadcasts this packet to all clients to inform that a snake changed its direction.
+The server broadcasts this packet every 50ms, with the all snake heads
 
 | Field    | Description              | Size    |
 |----------|--------------------------|---------|
@@ -72,3 +77,12 @@ The server sends this packet to inform a client has disconnected.
 |----------|---------------------------|---------|
 | Type     | Packet type value = 0x6   | 1 byte  |
 | SnakeID  | The snake id              | 1 byte  |
+
+
+### Connection rejected
+
+The server sends this packet if the server is full.
+
+| Field    | Description               | Size    |
+|----------|---------------------------|---------|
+| Type     | Packet type value = 0x7   | 1 byte  |
