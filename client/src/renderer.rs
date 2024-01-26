@@ -42,12 +42,14 @@ impl Renderer {
 
         // Snake(s)
         self.canvas.set_draw_color(SNAKE_COLOR);
-        for point in context.snake.body.iter() {
-            self.draw_point(point)?;
-        }
+        for snake in context.snakes.values() {
+            for point in snake.body.iter() {
+                self.draw_point(point)?;
+            }
 
-        self.canvas.set_draw_color(SNAKE_HEAD_COLOR);
-        self.draw_point(&context.snake.head)?;
+            self.canvas.set_draw_color(SNAKE_HEAD_COLOR);
+            self.draw_point(&snake.head)?;
+        }
 
         // Food
         self.canvas.set_draw_color(FOOD_COLOR);

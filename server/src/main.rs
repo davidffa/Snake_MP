@@ -119,34 +119,14 @@ fn client_read(
     }
 }
 
-fn send_fullstate(
-    stream: &mut TcpStream,
-    context: &Arc<RwLock<GameContext>>,
-    snake_id: u8,
-) -> io::Result<()> {
+fn send_fullstate(stream: &mut TcpStream, context: &Arc<RwLock<GameContext>>) -> io::Result<()> {
     let context = Arc::clone(context);
     let context = context.read().unwrap();
 
     let mut packet = Packet::new();
     packet.write(0x1);
 
-    let snake = context.snakes.get(&snake_id).unwrap();
-    packet.write(snake_id);
-    packet.write(snake.body.len() as u8 + 1);
-
-    for Point(x, y) in snake.body.iter() {
-        packet.write(*x as u8);
-        packet.write(*y as u8);
-    }
-
-    packet.write(snake.head.0 as u8);
-    packet.write(snake.head.1 as u8);
-
     for (id, snake) in context.snakes.iter() {
-        if *id == snake_id {
-            continue;
-        }
-
         packet.write(*id);
         packet.write_u16_le(snake.body.len() as u16 + 1);
 
@@ -229,6 +209,9 @@ fn main() -> io::Result<()> {
                             continue;
                         }
 
+                        // Release the lock
+                        drop(clients_map);
+
                         counter += 1;
                         let token = Token(counter);
 
@@ -251,7 +234,7 @@ fn main() -> io::Result<()> {
                                     );
                                 }
 
-                                if send_fullstate(&mut stream, &context, counter as u8).is_ok() {
+                                if send_fullstate(&mut stream, &context).is_ok() {
                                     clients.insert(token, stream);
 
                                     println!(

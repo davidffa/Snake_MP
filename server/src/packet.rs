@@ -19,7 +19,7 @@ impl Packet {
 
     pub fn write_u16_le(&mut self, value: u16) {
         let b0 = (value & 0xff) as u8;
-        let b1 = ((value >> 2) & 0xff) as u8;
+        let b1 = ((value >> 8) & 0xff) as u8;
 
         self.buffer.push(b0);
         self.buffer.push(b1);
