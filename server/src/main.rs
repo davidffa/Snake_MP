@@ -1,8 +1,9 @@
 use std::{
     io,
-    net::{Ipv4Addr, UdpSocket},
-    sync::{Arc, Mutex},
-    thread,
+    net::{Ipv4Addr, TcpListener},
+    sync::{Arc, RwLock},
+    thread::{self, sleep},
+    time::Duration,
 };
 
 use crate::game::GameContext;
@@ -11,50 +12,30 @@ mod game;
 mod util;
 
 const PORT: u16 = 14300;
+const TICK_INTERVAL: f32 = 0.05;
 
-fn receive(socket: Arc<UdpSocket>, context: Arc<Mutex<GameContext>>) {
-    let mut buf = [0; 16384];
+fn setup_gameloop(context: &Arc<RwLock<GameContext>>) {
+    let context = Arc::clone(context);
 
-    'reading: loop {
-        // TODO: Better error handling
-        let (amt, src) = socket.recv_from(&mut buf).unwrap();
-
-        let buf = &buf[..amt];
-
-        println!("Received bytes: {:?} from {src}", buf);
-
-        match buf[0] {
-            0x1 => {
-                println!("Requested a new stuff");
-            }
-            0x2 => {
-                println!("x2 printed");
-            }
-            0x3 => {
-                println!("Shutting down!");
-                break 'reading;
-            }
-            _ => {}
+    thread::spawn(move || loop {
+        {
+            let mut context = context.write().unwrap();
+            context.update();
         }
-    }
+
+        sleep(Duration::from_secs_f32(TICK_INTERVAL));
+    });
 }
 
 fn main() -> io::Result<()> {
-    let context = Arc::new(Mutex::new(GameContext::new()));
-    let socket = Arc::new(UdpSocket::bind((Ipv4Addr::UNSPECIFIED, PORT))?);
+    let context = Arc::new(RwLock::new(GameContext::new()));
+    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, PORT))?;
 
-    println!("UDP Socket bound to port {PORT}");
+    println!("TCP Socket listening to port {PORT}");
 
-    let reader = thread::spawn({
-        let context = Arc::clone(&context);
-        let socket = Arc::clone(&socket);
+    setup_gameloop(&context);
 
-        move || {
-            receive(socket, context);
-        }
-    });
-
-    reader.join().unwrap();
+    // TODO: Check how to use mio (https://github.com/tokio-rs/mio) and implement non blocking I/O tcp connections
 
     Ok(())
 }

@@ -76,6 +76,10 @@ impl GameContext {
     }
 
     pub fn update(&mut self) {
+        if self.snakes.is_empty() {
+            return;
+        }
+
         self.snakes.values_mut().for_each(Snake::update_head);
 
         // TODO: Handle snake updating
