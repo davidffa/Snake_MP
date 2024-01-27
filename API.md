@@ -4,9 +4,9 @@ The multiplayer feature works using an TCP-based connection, with a custom binar
 
 ## TCP Packets
 
-### ⚠ Note
+## ‼️ Note
 
-All TCP packets are prefixed with its length with a 16 bit unsigned int (little endian).
+All TCP packets are prefixed with its length, a 16 bit unsigned int (little endian).
 
 ### Info packet
 
