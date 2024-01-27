@@ -109,9 +109,9 @@ impl GameContext {
         self.snakes.remove(&snake_id);
     }
 
-    pub fn update(&mut self) -> Option<u8> {
+    pub fn update(&mut self) -> (Option<u8>, Option<Vec<u8>>) {
         if self.snakes.is_empty() {
-            return None;
+            return (None, None);
         }
 
         self.snakes.values_mut().for_each(Snake::update_head);
@@ -119,19 +119,36 @@ impl GameContext {
         let mut snake_eat = None;
 
         for (snake_id, snake) in self.snakes.iter_mut() {
-            if snake.head != self.food {
-                snake.body.pop_front();
-            } else {
+            if snake.head == self.food {
                 snake_eat = Some(*snake_id);
+            } else {
+                snake.body.pop_front();
+            }
+        }
+
+        let mut points = Vec::new();
+        let mut killed_snakes = Vec::new();
+
+        for snake in self.snakes.values() {
+            points.extend(snake.body.iter().cloned());
+            points.push(snake.head);
+        }
+
+        for (snake_id, snake) in self.snakes.iter_mut() {
+            if points.iter().filter(|p| **p == snake.head).count() > 1 {
+                killed_snakes.push(*snake_id);
             }
         }
 
         if snake_eat.is_some() {
             self.spawn_food();
-            return snake_eat;
         }
 
-        snake_eat
+        if killed_snakes.is_empty() {
+            return (snake_eat, None);
+        }
+
+        (snake_eat, Some(killed_snakes))
     }
 
     fn spawn_food(&mut self) {

@@ -5,6 +5,7 @@ mod util;
 use std::{
     collections::HashMap,
     io::{self, Read, Write},
+    net::Shutdown,
     sync::{Arc, RwLock, RwLockWriteGuard},
     thread::{self, sleep},
     time::Duration,
@@ -35,7 +36,22 @@ fn setup_gameloop(
         {
             let mut context = context.write().unwrap();
 
-            if let Some(snake_id) = context.update() {
+            let (snake_id, killed_snakes) = context.update();
+
+            if let Some(killed_snakes) = killed_snakes {
+                let mut clients = clients.write().unwrap();
+
+                for snake in killed_snakes.iter() {
+                    // The snake kill itself will be handled in client_read
+
+                    let _ = clients
+                        .get_mut(&Token(*snake as usize))
+                        .unwrap()
+                        .shutdown(Shutdown::Both);
+                }
+            }
+
+            if let Some(snake_id) = snake_id {
                 let mut clients = clients.write().unwrap();
 
                 let mut packet = Packet::with_capacity(4);
