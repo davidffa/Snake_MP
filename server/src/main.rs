@@ -205,7 +205,12 @@ fn broadcast_snake(
 
     let packet = packet.build();
 
-    for client in clients.values_mut() {
+    for (id, client) in clients.iter_mut() {
+        if id.0 as u8 == snake_id {
+            continue;
+        }
+
+        println!("DEBUG: Sending packet {:?}", packet);
         let _ = client.write_all(packet);
     }
 }

@@ -109,7 +109,7 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
     };
 
     // Server full
-    if buffer[0] == 0x7 {
+    if buffer[2] == 0x7 {
         return false;
     }
 
