@@ -9,4 +9,3 @@ default-run = "client"
 
 [dependencies]
 sdl2 = "0.36.0"
-mio = { version = "0.8.10", features = ["os-poll", "net"] }

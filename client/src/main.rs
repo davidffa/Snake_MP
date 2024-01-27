@@ -7,10 +7,10 @@ use std::{
     collections::VecDeque,
     error::Error,
     io::{Read, Write},
+    net::TcpStream,
 };
 
 use game::{Direction, GameContext, Snake};
-use mio::{net::TcpStream, Events, Interest, Poll, Token};
 use packet::Packet;
 use renderer::{Renderer, WINDOW_HEIGHT, WINDOW_WIDTH};
 use sdl2::{event::Event, keyboard::Keycode};
@@ -18,7 +18,6 @@ use sdl2::{event::Event, keyboard::Keycode};
 use crate::{game::State, util::Point};
 
 const ADDR: &str = "127.0.0.1:14300";
-const CLIENT: Token = Token(250);
 
 fn read_snake(packet: &mut Packet) -> Snake {
     let snake_sz = packet.read_u16_le() as usize;
@@ -128,13 +127,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut renderer = Renderer::new(window)?;
     let mut context = GameContext::new();
 
-    let mut poll = Poll::new()?;
-    let mut events = Events::with_capacity(1024);
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut stream = TcpStream::connect(ADDR.parse().unwrap())?;
-    poll.registry()
-        .register(&mut stream, CLIENT, Interest::READABLE)?;
+    let mut stream = TcpStream::connect(ADDR)?;
 
     println!("INFO: TCP Socket connected to {ADDR}");
 
@@ -142,17 +137,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut next_direction = Direction::Right;
 
     'running: loop {
-        if let Err(err) = poll.poll(&mut events, None) {
-            eprintln!("Failed to poll: {err}");
-            continue;
-        }
+        let res = read_packets(&mut stream, &mut context);
 
-        for _ in events.iter() {
-            let res = read_packets(&mut stream, &mut context);
-
-            if !res {
-                break 'running;
-            }
+        if !res {
+            break 'running;
         }
 
         for event in event_pump.poll_iter() {
