@@ -5,7 +5,6 @@ mod util;
 
 use std::{
     collections::VecDeque,
-    error::Error,
     io::{Read, Write},
     net::TcpStream,
 };
@@ -134,7 +133,7 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
     true
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), ()> {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -144,12 +143,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         .build()
         .unwrap();
 
-    let mut renderer = Renderer::new(window)?;
+    let mut renderer = Renderer::new(window).map_err(|err| {
+        eprintln!("ERROR: Could not create the renderer: {err}");
+    })?;
     let mut context = GameContext::new();
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut stream = TcpStream::connect(ADDR)?;
+    let mut stream = TcpStream::connect(ADDR).map_err(|err| {
+        eprintln!("ERROR: Could not connect to the snake server: {err}");
+    })?;
 
     println!("INFO: TCP Socket connected to {ADDR}");
 
@@ -206,10 +209,14 @@ fn main() -> Result<(), Box<dyn Error>> {
             packet.write(0x3);
             packet.write(dir);
 
-            stream.write_all(packet.build())?;
+            stream.write_all(packet.build()).map_err(|err| {
+                eprintln!("ERROR: Could not send TCP packet: {err}");
+            })?;
         }
 
-        renderer.render(&context)?;
+        renderer.render(&context).map_err(|err| {
+            eprintln!("ERROR: Could not render a frame: {err}");
+        })?;
     }
 
     Ok(())
