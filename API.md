@@ -11,6 +11,7 @@ The server sends this packet to a newly connected client, indicating its snake I
 | Field    | Description                     | Size    |
 |----------|---------------------------------|---------|
 | Type     | Packet type value = 0x1         | 1 byte  |
+| YourID   | Your snake ID                   | 1 byte  |
 | ID       | Snake identifier or food (0xff) | 1 byte  |
 | Size     | Coord sequence size (LSB)       | 2 bytes |
 | PointX   | x coordinate                    | 1 byte  |

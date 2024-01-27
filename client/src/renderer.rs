@@ -6,6 +6,8 @@ const BG_COLOR: Color = Color::RGB(24, 24, 24);
 const FOOD_COLOR: Color = Color::RED;
 const SNAKE_COLOR: Color = Color::BLUE;
 const SNAKE_HEAD_COLOR: Color = Color::CYAN;
+const ENEMY_BODY_COLOR: Color = Color::RGB(255, 100, 0);
+const ENEMY_HEAD_COLOR: Color = Color::YELLOW;
 
 pub const WINDOW_WIDTH: u32 = 800;
 pub const WINDOW_HEIGHT: u32 = 600;
@@ -41,13 +43,22 @@ impl Renderer {
         self.canvas.clear();
 
         // Snake(s)
-        self.canvas.set_draw_color(SNAKE_COLOR);
-        for snake in context.snakes.values() {
+        for (id, snake) in context.snakes.iter() {
+            if *id == context.snake_id {
+                self.canvas.set_draw_color(SNAKE_COLOR);
+            } else {
+                self.canvas.set_draw_color(ENEMY_BODY_COLOR);
+            }
+
             for point in snake.body.iter() {
                 self.draw_point(point)?;
             }
 
-            self.canvas.set_draw_color(SNAKE_HEAD_COLOR);
+            if *id == context.snake_id {
+                self.canvas.set_draw_color(SNAKE_HEAD_COLOR);
+            } else {
+                self.canvas.set_draw_color(ENEMY_HEAD_COLOR);
+            }
             self.draw_point(&snake.head)?;
         }
 

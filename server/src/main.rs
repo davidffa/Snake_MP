@@ -85,7 +85,7 @@ fn setup_gameloop(
             for client in clients.values_mut() {
                 let _ = client.write_all(packet);
 
-                println!("DEBUG: Sending packet {:?}", packet);
+                // println!("DEBUG: Sending packet {:?}", packet);
             }
         }
 
@@ -137,7 +137,7 @@ fn client_read(
         }
     };
 
-    println!("DEBUG: Message received: {:?}", &buffer[..buff_size]);
+    // println!("DEBUG: Message received: {:?}", &buffer[..buff_size]);
 
     let mut offset = 2;
 
@@ -166,12 +166,17 @@ fn client_read(
     }
 }
 
-fn send_fullstate(stream: &mut TcpStream, context: &Arc<RwLock<GameContext>>) -> io::Result<()> {
+fn send_fullstate(
+    snake_id: u8,
+    stream: &mut TcpStream,
+    context: &Arc<RwLock<GameContext>>,
+) -> io::Result<()> {
     let context = Arc::clone(context);
     let context = context.read().unwrap();
 
     let mut packet = Packet::new();
     packet.write(0x1);
+    packet.write(snake_id);
 
     for (id, snake) in context.snakes.iter() {
         packet.write(*id);
@@ -194,7 +199,7 @@ fn send_fullstate(stream: &mut TcpStream, context: &Arc<RwLock<GameContext>>) ->
 
     let packet = packet.build();
 
-    println!("DEBUG: Sending initial packet: {:?}", packet);
+    // println!("DEBUG: Sending initial packet: {:?}", packet);
 
     stream.write_all(packet)?;
 
@@ -226,7 +231,7 @@ fn broadcast_snake(
             continue;
         }
 
-        println!("DEBUG: Sending packet {:?}", packet);
+        // println!("DEBUG: Sending packet {:?}", packet);
         let _ = client.write_all(packet);
     }
 }
@@ -292,7 +297,7 @@ fn main() -> io::Result<()> {
                                     );
                                 }
 
-                                if send_fullstate(&mut stream, &context).is_ok() {
+                                if send_fullstate(counter as u8, &mut stream, &context).is_ok() {
                                     clients.insert(token, stream);
 
                                     println!(

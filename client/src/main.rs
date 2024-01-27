@@ -38,6 +38,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
 
     match ptype {
         0x1 => {
+            context.snake_id = packet.read();
             let mut obj_type = packet.read();
 
             while obj_type != 0xff {
@@ -46,7 +47,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
 
                 context.snakes.insert(obj_type, snake);
 
-                println!("Inserting snake {obj_type}");
+                println!("INFO: Spawned snake {obj_type}");
 
                 obj_type = packet.read();
             }
@@ -80,6 +81,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
             let snake = read_snake(&mut packet);
 
             context.snakes.insert(snake_id, snake);
+            println!("INFO: Spawned a new snake {snake_id}");
         }
         0x6 => {
             let snake_id = packet.read();
@@ -123,7 +125,7 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
         offset += 2;
 
         let bytes = buffer[offset..len + offset].to_vec();
-        println!("DEBUG: Packet received: {:?}", bytes);
+        // println!("DEBUG: Packet received: {:?}", bytes);
 
         process_packet(bytes, context);
 
