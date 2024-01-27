@@ -19,11 +19,18 @@ pub enum Direction {
 pub struct Snake {
     pub body: VecDeque<Point>,
     pub head: Point,
+    pub old_tail: Point,
 }
 
 impl Snake {
     pub fn new(body: VecDeque<Point>, head: Point) -> Self {
-        Self { body, head }
+        let old_tail = *body.front().unwrap();
+
+        Self {
+            body,
+            head,
+            old_tail,
+        }
     }
 }
 

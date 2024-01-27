@@ -53,10 +53,14 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
             }
 
             context.food = Point(packet.read() as i32, packet.read() as i32);
-
             context.state = State::Playing;
         }
         0x2 => {
+            let snake_id = packet.read();
+            let snake = context.snakes.get_mut(&snake_id).unwrap();
+
+            snake.body.push_front(snake.old_tail);
+
             context.food = Point(packet.read() as i32, packet.read() as i32);
         }
         0x4 => {
@@ -69,7 +73,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
 
                 snake.body.push_back(snake.head);
                 snake.head = head;
-                snake.body.pop_front();
+                snake.old_tail = snake.body.pop_front().unwrap();
             }
         }
         0x5 => {

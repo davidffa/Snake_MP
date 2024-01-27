@@ -26,6 +26,7 @@ The server sends this packet when a new food is spawned
 | Field    | Description               | Size    |
 |----------|---------------------------|---------|
 | Type     | Packet type value = 0x2   | 1 byte  |
+| SnakeID  | Snake that ate the food   | 1 byte  |
 | PointX   | x coordinate              | 1 byte  |
 | PointY   | y coordinate              | 1 byte  |
 

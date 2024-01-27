@@ -34,7 +34,21 @@ fn setup_gameloop(
     thread::spawn(move || loop {
         {
             let mut context = context.write().unwrap();
-            context.update();
+
+            if let Some(snake_id) = context.update() {
+                let mut clients = clients.write().unwrap();
+
+                let mut packet = Packet::with_capacity(4);
+                packet.write(0x2);
+                packet.write(snake_id);
+                packet.write(context.food.0 as u8);
+                packet.write(context.food.1 as u8);
+                let packet = packet.build();
+
+                for client in clients.values_mut() {
+                    let _ = client.write_all(packet);
+                }
+            }
         }
 
         {

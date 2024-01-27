@@ -109,31 +109,29 @@ impl GameContext {
         self.snakes.remove(&snake_id);
     }
 
-    pub fn update(&mut self) -> bool {
+    pub fn update(&mut self) -> Option<u8> {
         if self.snakes.is_empty() {
-            return false;
+            return None;
         }
 
         self.snakes.values_mut().for_each(Snake::update_head);
 
-        let snakes = self.snakes.values_mut();
+        let mut snake_eat = None;
 
-        let mut food_eaten = false;
-
-        for snake in snakes {
+        for (snake_id, snake) in self.snakes.iter_mut() {
             if snake.head != self.food {
                 snake.body.pop_front();
             } else {
-                food_eaten = true;
+                snake_eat = Some(*snake_id);
             }
         }
 
-        if food_eaten {
+        if snake_eat.is_some() {
             self.spawn_food();
-            return true;
+            return snake_eat;
         }
 
-        false
+        snake_eat
     }
 
     fn spawn_food(&mut self) {
