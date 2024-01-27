@@ -72,6 +72,17 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
                 snake.body.pop_front();
             }
         }
+        0x5 => {
+            let snake_id = packet.read();
+            let snake = read_snake(&mut packet);
+
+            context.snakes.insert(snake_id, snake);
+        }
+        0x6 => {
+            let snake_id = packet.read();
+
+            context.snakes.remove(&snake_id);
+        }
         _ => {
             eprintln!("WARN: Received unknown packet!");
         }
@@ -92,6 +103,11 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
             return false;
         }
     };
+
+    // Server full
+    if buffer[0] == 0x7 {
+        return false;
+    }
 
     let mut offset = 0;
 

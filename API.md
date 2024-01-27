@@ -57,7 +57,7 @@ The server sends this packet to inform all the clients that a new snake connecte
 |----------|---------------------------|---------|
 | Type     | Packet type value = 0x5   | 1 byte  |
 | ID       | Snake identifier          | 1 byte  |
-| Size     | Coord sequence size       | 1 byte  |
+| Size     | Coord sequence size (LSB) | 2 bytes |
 | PointX   | x coordinate              | 1 byte  |
 | PointY   | y coordinate              | 1 byte  |
 | ...      | ...                       | 1 byte  |

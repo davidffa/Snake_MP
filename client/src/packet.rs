@@ -4,13 +4,6 @@ pub struct Packet {
 }
 
 impl Packet {
-    pub fn new() -> Self {
-        Self {
-            buffer: vec![0, 0],
-            offset: 0,
-        }
-    }
-
     pub fn with_capacity(capacity: usize) -> Self {
         let mut buffer = Vec::with_capacity(capacity + 2);
 

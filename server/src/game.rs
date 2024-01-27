@@ -109,9 +109,9 @@ impl GameContext {
         self.snakes.remove(&snake_id);
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         if self.snakes.is_empty() {
-            return;
+            return false;
         }
 
         self.snakes.values_mut().for_each(Snake::update_head);
@@ -130,7 +130,10 @@ impl GameContext {
 
         if food_eaten {
             self.spawn_food();
+            return true;
         }
+
+        false
     }
 
     fn spawn_food(&mut self) {

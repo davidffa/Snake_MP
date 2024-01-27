@@ -179,7 +179,7 @@ fn broadcast_snake(
     let mut packet = Packet::with_capacity(6);
     packet.write(0x5);
     packet.write(snake_id);
-    packet.write(snake.body.len() as u8 + 1);
+    packet.write_u16_le(snake.body.len() as u16 + 1);
 
     for Point(x, y) in snake.body.iter() {
         packet.write(*x as u8);
