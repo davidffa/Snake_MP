@@ -49,12 +49,13 @@ fn setup_gameloop(
                 packet.write(snake.head.1 as u8);
             }
 
+            let packet = packet.build();
             let mut clients = clients.write().unwrap();
 
             for client in clients.values_mut() {
-                let _ = client.write_all(&packet.buffer);
+                let _ = client.write_all(packet);
 
-                println!("DEBUG: Sending packet {:?}", packet.buffer);
+                println!("DEBUG: Sending packet {:?}", packet);
             }
         }
 
@@ -63,6 +64,7 @@ fn setup_gameloop(
 }
 
 fn client_read(
+    poll: &mut Poll,
     context: Arc<RwLock<GameContext>>,
     clients: Arc<RwLock<HashMap<Token, TcpStream>>>,
     token: Token,
@@ -73,49 +75,64 @@ fn client_read(
     let mut buffer = [0; 128];
     let snake_id = token.0 as u8;
 
-    let bytes: Vec<_> = match client.read(&mut buffer) {
+    let buff_size = match client.read(&mut buffer) {
         Ok(0) => {
             println!("INFO: Client disconnected, token = {}", token.0);
 
+            // Unlock clients
+            drop(clients_map);
+
             let mut clients = clients.write().unwrap();
-            clients.remove(&token);
+            let mut context = context.write().unwrap();
+
+            let mut disconnected_stream = clients.remove(&token).unwrap();
+            let _ = poll.registry().deregister(&mut disconnected_stream);
+
+            context.kill_snake(token.0 as u8);
+
+            let mut packet = Packet::with_capacity(2);
+            packet.write(0x6);
+            packet.write(snake_id);
+            let packet = packet.build();
 
             for client in clients.values_mut() {
-                let mut packet = Packet::with_capacity(2);
-                packet.write(0x6);
-                packet.write(snake_id);
-
-                let _ = client.write_all(&packet.buffer);
+                let _ = client.write_all(packet);
             }
             return;
         }
-        Ok(n) => buffer[..n].iter().collect(),
+        Ok(n) => n,
         Err(err) => {
             eprintln!("Read failed: {err}");
             return;
         }
     };
 
-    println!("DEBUG: Message received: {:?}", bytes);
+    println!("DEBUG: Message received: {:?}", &buffer[..buff_size]);
 
-    if buffer[0] == 0x3 {
-        let direction = match buffer[1] {
-            0x1 => Some(Direction::Up),
-            0x2 => Some(Direction::Down),
-            0x3 => Some(Direction::Left),
-            0x4 => Some(Direction::Right),
-            _ => None,
-        };
+    let mut offset = 2;
 
-        if let Some(direction) = direction {
-            let mut context = context.write().unwrap();
+    while offset < buff_size {
+        if buffer[offset] == 0x3 {
+            let direction = match buffer[offset + 1] {
+                0x1 => Some(Direction::Up),
+                0x2 => Some(Direction::Down),
+                0x3 => Some(Direction::Left),
+                0x4 => Some(Direction::Right),
+                _ => None,
+            };
 
-            context
-                .snakes
-                .get_mut(&snake_id)
-                .unwrap()
-                .change_direction(direction);
+            if let Some(direction) = direction {
+                let mut context = context.write().unwrap();
+
+                context
+                    .snakes
+                    .get_mut(&snake_id)
+                    .unwrap()
+                    .change_direction(direction);
+            }
         }
+
+        offset += 2;
     }
 }
 
@@ -145,7 +162,11 @@ fn send_fullstate(stream: &mut TcpStream, context: &Arc<RwLock<GameContext>>) ->
 
     drop(context);
 
-    stream.write_all(&packet.buffer)?;
+    let packet = packet.build();
+
+    println!("DEBUG: Sending initial packet: {:?}", packet);
+
+    stream.write_all(packet)?;
 
     Ok(())
 }
@@ -168,8 +189,10 @@ fn broadcast_snake(
     packet.write(snake.head.0 as u8);
     packet.write(snake.head.1 as u8);
 
+    let packet = packet.build();
+
     for client in clients.values_mut() {
-        let _ = client.write_all(&packet.buffer);
+        let _ = client.write_all(packet);
     }
 }
 
@@ -251,7 +274,7 @@ fn main() -> io::Result<()> {
                     let context = Arc::clone(&context);
                     let clients = Arc::clone(&clients);
 
-                    client_read(context, clients, token);
+                    client_read(&mut poll, context, clients, token);
                 }
             }
         }

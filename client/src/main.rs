@@ -3,7 +3,11 @@ mod packet;
 mod renderer;
 mod util;
 
-use std::{collections::VecDeque, error::Error, io::Read};
+use std::{
+    collections::VecDeque,
+    error::Error,
+    io::{Read, Write},
+};
 
 use game::{Direction, GameContext, Snake};
 use mio::{net::TcpStream, Events, Interest, Poll, Token};
@@ -30,23 +34,7 @@ fn read_snake(packet: &mut Packet) -> Snake {
     Snake::new(body, head)
 }
 
-fn read_packet(stream: &mut TcpStream, context: &mut GameContext) -> bool {
-    let mut buffer = [0; 128];
-
-    let bytes: Vec<u8> = match stream.read(&mut buffer) {
-        Ok(0) => {
-            println!("INFO: Disconnected!");
-            return false;
-        }
-        Ok(n) => buffer[..n].to_vec(),
-        Err(err) => {
-            eprintln!("Error reading the tcp stream {err}");
-            return false;
-        }
-    };
-
-    println!("DEBUG: Packet received: {:?}", bytes);
-
+fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
     let mut packet = Packet::from(bytes);
     let ptype = packet.read();
 
@@ -76,8 +64,6 @@ fn read_packet(stream: &mut TcpStream, context: &mut GameContext) -> bool {
             while packet.remaining() > 0 {
                 let snake_id = packet.read();
 
-                println!("Snake ID = {snake_id}");
-
                 let head = Point(packet.read() as i32, packet.read() as i32);
 
                 let snake = context.snakes.get_mut(&snake_id).unwrap();
@@ -90,6 +76,40 @@ fn read_packet(stream: &mut TcpStream, context: &mut GameContext) -> bool {
         _ => {
             eprintln!("WARN: Received unknown packet!");
         }
+    }
+}
+
+fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
+    let mut buffer = [0; 512];
+
+    let buff_size = match stream.read(&mut buffer) {
+        Ok(0) => {
+            println!("INFO: Disconnected!");
+            return false;
+        }
+        Ok(n) => n,
+        Err(err) => {
+            eprintln!("Error reading the tcp stream {err}");
+            return false;
+        }
+    };
+
+    let mut offset = 0;
+
+    while offset < buff_size {
+        let b0 = buffer[0] as usize;
+        let b1 = buffer[1] as usize;
+
+        let len = (b1 << 8) | b0;
+
+        offset += 2;
+
+        let bytes = buffer[offset..len + offset].to_vec();
+        println!("DEBUG: Packet received: {:?}", bytes);
+
+        process_packet(bytes, context);
+
+        offset += len;
     }
 
     true
@@ -118,6 +138,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("INFO: TCP Socket connected to {ADDR}");
 
+    let mut old_dir = Direction::Right;
     let mut next_direction = Direction::Right;
 
     'running: loop {
@@ -127,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         for _ in events.iter() {
-            let res = read_packet(&mut stream, &mut context);
+            let res = read_packets(&mut stream, &mut context);
 
             if !res {
                 break 'running;
@@ -157,7 +178,29 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
 
-        // TODO: Send direction update if needed
+        if old_dir != next_direction
+            && ((old_dir == Direction::Up && next_direction != Direction::Down)
+                || (old_dir == Direction::Down && next_direction != Direction::Up)
+                || (old_dir == Direction::Left && next_direction != Direction::Right)
+                || (old_dir == Direction::Right && next_direction != Direction::Left))
+        {
+            old_dir = next_direction;
+
+            let dir: u8 = match next_direction {
+                Direction::Up => 1,
+                Direction::Down => 2,
+                Direction::Left => 3,
+                Direction::Right => 4,
+            };
+
+            let mut packet = Packet::with_capacity(2);
+
+            packet.write(0x3);
+            packet.write(dir);
+
+            stream.write_all(packet.build())?;
+        }
+
         renderer.render(&context)?;
     }
 

@@ -4,13 +4,16 @@ pub struct Packet {
 
 impl Packet {
     pub fn new() -> Self {
-        Self { buffer: Vec::new() }
+        Self { buffer: vec![0, 0] }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            buffer: Vec::with_capacity(capacity),
-        }
+        let mut buffer = Vec::with_capacity(capacity + 2);
+
+        buffer.push(0);
+        buffer.push(0);
+
+        Self { buffer }
     }
 
     pub fn write(&mut self, value: u8) {
@@ -23,5 +26,16 @@ impl Packet {
 
         self.buffer.push(b0);
         self.buffer.push(b1);
+    }
+
+    pub fn build(&mut self) -> &[u8] {
+        let len = self.buffer.len() - 2;
+        let b0 = (len & 0xff) as u8;
+        let b1 = ((len >> 8) & 0xff) as u8;
+
+        self.buffer[0] = b0;
+        self.buffer[1] = b1;
+
+        &self.buffer
     }
 }

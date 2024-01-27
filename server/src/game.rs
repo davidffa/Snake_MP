@@ -105,6 +105,10 @@ impl GameContext {
         self.snakes.insert(snake_id, snake);
     }
 
+    pub fn kill_snake(&mut self, snake_id: u8) {
+        self.snakes.remove(&snake_id);
+    }
+
     pub fn update(&mut self) {
         if self.snakes.is_empty() {
             return;

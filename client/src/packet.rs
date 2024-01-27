@@ -6,9 +6,18 @@ pub struct Packet {
 impl Packet {
     pub fn new() -> Self {
         Self {
-            buffer: Vec::new(),
+            buffer: vec![0, 0],
             offset: 0,
         }
+    }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        let mut buffer = Vec::with_capacity(capacity + 2);
+
+        buffer.push(0);
+        buffer.push(0);
+
+        Self { buffer, offset: 2 }
     }
 
     pub fn from(bytes: Vec<u8>) -> Self {
@@ -37,15 +46,18 @@ impl Packet {
         self.buffer.push(value);
     }
 
-    pub fn write_u16_le(&mut self, value: u16) {
-        let b0 = (value & 0xff) as u8;
-        let b1 = ((value >> 8) & 0xff) as u8;
-
-        self.buffer.push(b0);
-        self.buffer.push(b1);
-    }
-
     pub fn remaining(&self) -> usize {
         self.buffer.len() - self.offset
+    }
+
+    pub fn build(&mut self) -> &[u8] {
+        let len = self.buffer.len() - 2;
+        let b0 = (len & 0xff) as u8;
+        let b1 = ((len >> 8) & 0xff) as u8;
+
+        self.buffer[0] = b0;
+        self.buffer[1] = b1;
+
+        &self.buffer
     }
 }
