@@ -4,6 +4,10 @@ The multiplayer feature works using an TCP-based connection, with a custom binar
 
 ## TCP Packets
 
+### ⚠ Note
+
+All TCP packets are prefixed with its length with a 16 bit unsigned int (little endian).
+
 ### Info packet
 
 The server sends this packet to a newly connected client, indicating its snake ID, the position of all snakes and the position of the food.

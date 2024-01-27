@@ -5,6 +5,7 @@ mod util;
 
 use std::{
     collections::VecDeque,
+    env,
     io::{Read, Write},
     net::TcpStream,
 };
@@ -136,6 +137,14 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
 }
 
 fn main() -> Result<(), ()> {
+    let args: Vec<_> = env::args().collect();
+    let server_addr = if args.len() >= 2 {
+        &args[1]
+    } else {
+        println!("INFO: Server IP not provided, falling back to {ADDR}");
+        ADDR
+    };
+
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
 
@@ -152,11 +161,11 @@ fn main() -> Result<(), ()> {
 
     let mut event_pump = sdl_context.event_pump().unwrap();
 
-    let mut stream = TcpStream::connect(ADDR).map_err(|err| {
+    let mut stream = TcpStream::connect(server_addr).map_err(|err| {
         eprintln!("ERROR: Could not connect to the snake server: {err}");
     })?;
 
-    println!("INFO: TCP Socket connected to {ADDR}");
+    println!("INFO: TCP Socket connected to {server_addr}");
 
     let mut old_dir = Direction::Right;
     let mut next_direction = Direction::Right;
