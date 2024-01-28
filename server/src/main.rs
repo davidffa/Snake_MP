@@ -242,7 +242,7 @@ fn main() -> io::Result<()> {
 
     let mut poll = Poll::new()?;
     let mut events = Events::with_capacity(1024);
-    let mut counter = 0;
+    let mut snake_id = 1;
 
     let clients: Arc<RwLock<HashMap<Token, TcpStream>>> = Arc::new(RwLock::new(HashMap::new()));
 
@@ -273,11 +273,14 @@ fn main() -> io::Result<()> {
                             continue;
                         }
 
+                        // snake_id = (snake_id + 1) % 255;
+
+                        while clients_map.contains_key(&Token(snake_id)) {
+                            snake_id = (snake_id + 1) % 255;
+                        }
+
                         // Release the lock
                         drop(clients_map);
-
-                        counter += 1;
-                        let token = Token(counter);
 
                         match poll
                             .registry()
@@ -290,19 +293,19 @@ fn main() -> io::Result<()> {
                                 {
                                     let mut context = context.write().unwrap();
 
-                                    context.spawn_snake(counter as u8);
+                                    context.spawn_snake(snake_id as u8);
                                     broadcast_snake(
                                         &mut clients,
-                                        counter as u8,
-                                        context.snakes.get(&(counter as u8)).unwrap(),
+                                        snake_id as u8,
+                                        context.snakes.get(&(snake_id as u8)).unwrap(),
                                     );
                                 }
 
-                                if send_fullstate(counter as u8, &mut stream, &context).is_ok() {
+                                if send_fullstate(snake_id as u8, &mut stream, &context).is_ok() {
                                     clients.insert(token, stream);
 
                                     println!(
-                                        "INFO: Client {client_addr} connected, with token {counter}!"
+                                        "INFO: Client {client_addr} connected, with token {snake_id}!"
                                     );
                                 }
                             }
