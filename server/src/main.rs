@@ -273,14 +273,14 @@ fn main() -> io::Result<()> {
                             continue;
                         }
 
-                        // snake_id = (snake_id + 1) % 255;
-
                         while clients_map.contains_key(&Token(snake_id)) {
-                            snake_id = (snake_id + 1) % 255;
+                            snake_id = (snake_id + 1) % 254;
                         }
 
                         // Release the lock
                         drop(clients_map);
+
+                        let token = Token(snake_id);
 
                         match poll
                             .registry()
