@@ -24,7 +24,7 @@ use crate::game::{Direction, GameContext};
 const PORT: u16 = 14300;
 const TICK_INTERVAL: f32 = 0.05;
 const SERVER: Token = Token(0);
-const MAX_PLAYERS: usize = 12;
+const MAX_PLAYERS: usize = 8;
 
 fn setup_gameloop(
     context: &Arc<RwLock<GameContext>>,
@@ -269,7 +269,7 @@ fn main() -> io::Result<()> {
                         let clients_map = clients.read().unwrap();
 
                         if clients_map.len() > MAX_PLAYERS {
-                            let _ = stream.write_all(&[0x7]);
+                            let _ = stream.write_all(&[1, 0, 0x7]);
                             continue;
                         }
 
