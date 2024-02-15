@@ -118,8 +118,8 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
     let mut offset = 0;
 
     while offset < buff_size {
-        let b0 = buffer[0] as usize;
-        let b1 = buffer[1] as usize;
+        let b0 = buffer[offset] as usize;
+        let b1 = buffer[offset + 1] as usize;
 
         let len = (b1 << 8) | b0;
 
