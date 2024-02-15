@@ -94,6 +94,33 @@ fn setup_gameloop(
     });
 }
 
+fn disconnect_client(
+    snake_id: u8,
+    poll: &mut Poll,
+    context: &Arc<RwLock<GameContext>>,
+    clients: &Arc<RwLock<HashMap<Token, TcpStream>>>,
+    token: Token,
+) {
+    println!("INFO: Client disconnected, token = {}", token.0);
+
+    let mut clients = clients.write().unwrap();
+    let mut context = context.write().unwrap();
+
+    let mut disconnected_stream = clients.remove(&token).unwrap();
+    let _ = poll.registry().deregister(&mut disconnected_stream);
+
+    context.kill_snake(token.0 as u8);
+
+    let mut packet = Packet::with_capacity(2);
+    packet.write(0x6);
+    packet.write(snake_id);
+    let packet = packet.build();
+
+    for client in clients.values_mut() {
+        let _ = client.write_all(packet);
+    }
+}
+
 fn client_read(
     poll: &mut Poll,
     context: Arc<RwLock<GameContext>>,
@@ -108,32 +135,22 @@ fn client_read(
 
     let buff_size = match client.read(&mut buffer) {
         Ok(0) => {
-            println!("INFO: Client disconnected, token = {}", token.0);
-
             // Unlock clients
             drop(clients_map);
 
-            let mut clients = clients.write().unwrap();
-            let mut context = context.write().unwrap();
-
-            let mut disconnected_stream = clients.remove(&token).unwrap();
-            let _ = poll.registry().deregister(&mut disconnected_stream);
-
-            context.kill_snake(token.0 as u8);
-
-            let mut packet = Packet::with_capacity(2);
-            packet.write(0x6);
-            packet.write(snake_id);
-            let packet = packet.build();
-
-            for client in clients.values_mut() {
-                let _ = client.write_all(packet);
-            }
+            disconnect_client(snake_id, poll, &context, &clients, token);
             return;
         }
         Ok(n) => n,
         Err(err) => {
             eprintln!("Read failed: {err}");
+
+            if let Some(errno) = err.raw_os_error() {
+                if errno == 104 {
+                    // Connection reset by peer (disconnect)
+                    disconnect_client(snake_id, poll, &context, &clients, token);
+                }
+            }
             return;
         }
     };
