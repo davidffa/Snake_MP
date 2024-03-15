@@ -9,3 +9,4 @@ authors = ["David Amorim"]
 [dependencies]
 mio = { version = "0.8.10", features = ["os-poll", "net"] }
 rand = "0.8.5"
+common = { path = "../common" }
