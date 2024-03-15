@@ -106,7 +106,8 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
     let packet_size = u16::from_le_bytes(size_bytes) as usize;
 
     if packet_size == 0 {
-        panic!("Oops, packet size is equal to zero");
+        eprintln!("WARN: Received a empty packet");
+        return false;
     }
 
     let mut buffer = vec![0; packet_size];
@@ -119,6 +120,7 @@ fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
     let mut packet = ReadablePacket::from_bytes(&buffer);
 
     if packet.r#type == PacketType::ConnRejected {
+        println!("INFO: Server full!");
         return false;
     }
 
