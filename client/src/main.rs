@@ -1,17 +1,16 @@
 mod game;
-mod packet;
 mod renderer;
 mod util;
 
 use std::{
     collections::VecDeque,
     env,
-    io::{Read, Write},
+    io::{ErrorKind, Read, Write},
     net::TcpStream,
 };
 
+use common::packet::{PacketBuilder, PacketType, ReadablePacket};
 use game::{Direction, GameContext, Snake};
-use packet::Packet;
 use renderer::{Renderer, WINDOW_HEIGHT, WINDOW_WIDTH};
 use sdl2::{event::Event, keyboard::Keycode};
 
@@ -19,7 +18,7 @@ use crate::{game::State, util::Point};
 
 const ADDR: &str = "127.0.0.1:14300";
 
-fn read_snake(packet: &mut Packet) -> Snake {
+fn read_snake(packet: &mut ReadablePacket) -> Snake {
     let snake_sz = packet.read_u16_le() as usize;
 
     let mut body = VecDeque::with_capacity(snake_sz - 1);
@@ -33,18 +32,15 @@ fn read_snake(packet: &mut Packet) -> Snake {
     Snake::new(body, head)
 }
 
-fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
-    let mut packet = Packet::from(bytes);
-    let ptype = packet.read();
-
-    match ptype {
-        0x1 => {
+fn process_packet(packet: &mut ReadablePacket, context: &mut GameContext) {
+    match packet.r#type {
+        PacketType::Info => {
             context.snake_id = packet.read();
             let mut obj_type = packet.read();
 
             while obj_type != 0xff {
                 // Read snakes
-                let snake = read_snake(&mut packet);
+                let snake = read_snake(packet);
 
                 context.snakes.insert(obj_type, snake);
 
@@ -56,7 +52,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
             context.food = Point(packet.read() as i32, packet.read() as i32);
             context.state = State::Playing;
         }
-        0x2 => {
+        PacketType::FoodUpdate => {
             let snake_id = packet.read();
             let snake = context.snakes.get_mut(&snake_id).unwrap();
 
@@ -64,7 +60,7 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
 
             context.food = Point(packet.read() as i32, packet.read() as i32);
         }
-        0x4 => {
+        PacketType::HeadUpdate => {
             while packet.remaining() > 0 {
                 let snake_id = packet.read();
 
@@ -77,14 +73,14 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
                 snake.old_tail = snake.body.pop_front().unwrap();
             }
         }
-        0x5 => {
+        PacketType::SnakeConnect => {
             let snake_id = packet.read();
-            let snake = read_snake(&mut packet);
+            let snake = read_snake(packet);
 
             context.snakes.insert(snake_id, snake);
             println!("INFO: Spawned a new snake {snake_id}");
         }
-        0x6 => {
+        PacketType::SnakeDisconnect => {
             let snake_id = packet.read();
 
             context.snakes.remove(&snake_id);
@@ -96,42 +92,37 @@ fn process_packet(bytes: Vec<u8>, context: &mut GameContext) {
 }
 
 fn read_packets(stream: &mut TcpStream, context: &mut GameContext) -> bool {
-    let mut buffer = [0; 512];
+    let mut size_bytes = [0u8; 2];
 
-    let buff_size = match stream.read(&mut buffer) {
-        Ok(0) => {
-            println!("INFO: Disconnected!");
-            return false;
+    if let Err(err) = stream.read_exact(&mut size_bytes) {
+        if err.kind() != ErrorKind::UnexpectedEof {
+            eprintln!("Error reading the TCP stream {err}");
         }
-        Ok(n) => n,
-        Err(err) => {
-            eprintln!("Error reading the tcp stream {err}");
-            return false;
-        }
-    };
 
-    // Server full
-    if buffer[2] == 0x7 {
+        println!("INFO: Disconnected");
         return false;
     }
 
-    let mut offset = 0;
+    let packet_size = u16::from_le_bytes(size_bytes) as usize;
 
-    while offset < buff_size {
-        let b0 = buffer[offset] as usize;
-        let b1 = buffer[offset + 1] as usize;
-
-        let len = (b1 << 8) | b0;
-
-        offset += 2;
-
-        let bytes = buffer[offset..len + offset].to_vec();
-        // println!("DEBUG: Packet received: {:?}", bytes);
-
-        process_packet(bytes, context);
-
-        offset += len;
+    if packet_size == 0 {
+        panic!("Oops, packet size is equal to zero");
     }
+
+    let mut buffer = vec![0; packet_size];
+
+    if let Err(err) = stream.read_exact(&mut buffer) {
+        eprintln!("Error reading the TCP stream (buffer) {err}");
+        return false;
+    }
+
+    let mut packet = ReadablePacket::from_bytes(&buffer);
+
+    if packet.r#type == PacketType::ConnRejected {
+        return false;
+    }
+
+    process_packet(&mut packet, context);
 
     true
 }
@@ -215,12 +206,10 @@ fn main() -> Result<(), ()> {
                 Direction::Right => 4,
             };
 
-            let mut packet = Packet::with_capacity(2);
-
-            packet.write(0x3);
+            let mut packet = PacketBuilder::with_capacity(PacketType::DirectionUpdate, 1);
             packet.write(dir);
 
-            stream.write_all(packet.build()).map_err(|err| {
+            stream.write_all(&packet.build()).map_err(|err| {
                 eprintln!("ERROR: Could not send TCP packet: {err}");
             })?;
         }

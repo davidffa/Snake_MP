@@ -9,3 +9,4 @@ default-run = "client"
 
 [dependencies]
 sdl2 = "0.36.0"
+common = { path = "../common" }
