@@ -1,5 +1,4 @@
 mod game;
-mod util;
 
 use std::{
     collections::HashMap,
@@ -10,13 +9,12 @@ use std::{
     time::Duration,
 };
 
-use common::packet::{PacketBuilder, PacketType, ReadablePacket};
+use common::{packet::{PacketBuilder, PacketType, ReadablePacket}, util::Point};
 use game::Snake;
 use mio::{
     net::{TcpListener, TcpStream},
     Events, Interest, Poll, Token,
 };
-use util::Point;
 
 use crate::game::{Direction, GameContext};
 

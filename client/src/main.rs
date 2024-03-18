@@ -1,6 +1,5 @@
 mod game;
 mod renderer;
-mod util;
 
 use std::{
     collections::VecDeque,
@@ -9,12 +8,12 @@ use std::{
     net::TcpStream,
 };
 
-use common::packet::{PacketBuilder, PacketType, ReadablePacket};
+use common::{packet::{PacketBuilder, PacketType, ReadablePacket}, util::Point};
 use game::{Direction, GameContext, Snake};
 use renderer::{Renderer, WINDOW_HEIGHT, WINDOW_WIDTH};
 use sdl2::{event::Event, keyboard::Keycode};
 
-use crate::{game::State, util::Point};
+use crate::game::State;
 
 const ADDR: &str = "127.0.0.1:14300";
 

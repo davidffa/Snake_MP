@@ -1,6 +1,7 @@
+use common::util::Point;
 use sdl2::{pixels::Color, rect::Rect, render::WindowCanvas, video::Window};
 
-use crate::{game::GameContext, util::Point};
+use crate::game::GameContext;
 
 const BG_COLOR: Color = Color::RGB(24, 24, 24);
 const FOOD_COLOR: Color = Color::RED;

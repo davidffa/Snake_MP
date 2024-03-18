@@ -3,9 +3,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+use common::util::Point;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-
-use crate::util::Point;
 
 const WIDTH: i32 = 80;
 const HEIGHT: i32 = 60;

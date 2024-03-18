@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
-use crate::util::Point;
+use common::util::Point;
 
 #[derive(PartialEq)]
 pub enum State {
