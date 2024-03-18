@@ -1,22 +1,21 @@
 mod game;
-mod packet;
 mod util;
 
 use std::{
     collections::HashMap,
-    io::{self, Read, Write},
+    io::{self, ErrorKind, Read, Write},
     net::Shutdown,
     sync::{Arc, RwLock, RwLockWriteGuard},
     thread::{self, sleep},
     time::Duration,
 };
 
+use common::packet::{PacketBuilder, PacketType, ReadablePacket};
 use game::Snake;
 use mio::{
     net::{TcpListener, TcpStream},
     Events, Interest, Poll, Token,
 };
-use packet::Packet;
 use util::Point;
 
 use crate::game::{Direction, GameContext};
@@ -55,15 +54,14 @@ fn setup_gameloop(
             if let Some(snake_id) = snake_id {
                 let mut clients = clients.write().unwrap();
 
-                let mut packet = Packet::with_capacity(4);
-                packet.write(0x2);
+                let mut packet = PacketBuilder::with_capacity(PacketType::FoodUpdate, 3);
                 packet.write(snake_id);
                 packet.write(context.food.0 as u8);
                 packet.write(context.food.1 as u8);
                 let packet = packet.build();
 
                 for client in clients.values_mut() {
-                    let _ = client.write_all(packet);
+                    let _ = client.write_all(&packet);
                 }
             }
         }
@@ -71,8 +69,7 @@ fn setup_gameloop(
         {
             let context = context.read().unwrap();
 
-            let mut packet = Packet::new();
-            packet.write(0x4);
+            let mut packet = PacketBuilder::new(PacketType::HeadUpdate);
 
             for (id, snake) in context.snakes.iter() {
                 packet.write(*id);
@@ -84,7 +81,7 @@ fn setup_gameloop(
             let mut clients = clients.write().unwrap();
 
             for client in clients.values_mut() {
-                let _ = client.write_all(packet);
+                let _ = client.write_all(&packet);
 
                 // println!("DEBUG: Sending packet {:?}", packet);
             }
@@ -111,13 +108,12 @@ fn disconnect_client(
 
     context.kill_snake(token.0 as u8);
 
-    let mut packet = Packet::with_capacity(2);
-    packet.write(0x6);
+    let mut packet = PacketBuilder::with_capacity(PacketType::SnakeDisconnect, 1);
     packet.write(snake_id);
     let packet = packet.build();
 
     for client in clients.values_mut() {
-        let _ = client.write_all(packet);
+        let _ = client.write_all(&packet);
     }
 }
 
@@ -130,45 +126,48 @@ fn client_read(
     let clients_map = clients.read().unwrap();
     let mut client = clients_map.get(&token).unwrap();
 
-    let mut buffer = [0; 128];
+    let mut size_bytes = [0u8; 2];
     let snake_id = token.0 as u8;
 
-    let buff_size = match client.read(&mut buffer) {
-        Ok(0) => {
-            // Unlock clients
-            drop(clients_map);
-
-            disconnect_client(snake_id, poll, &context, &clients, token);
-            return;
+    if let Err(err) = client.read_exact(&mut size_bytes) {
+        if err.kind() != ErrorKind::UnexpectedEof {
+            eprintln!("ERROR: Failed to read from client {snake_id}: {err}");
         }
-        Ok(n) => n,
-        Err(err) => {
-            eprintln!("Read failed: {err}");
 
-            if let Some(errno) = err.raw_os_error() {
-                if errno == 104 {
-                    // Connection reset by peer (disconnect)
-                    disconnect_client(snake_id, poll, &context, &clients, token);
-                }
-            }
-            return;
-        }
-    };
+        // Unlock clients
+        drop(clients_map);
+
+        disconnect_client(snake_id, poll, &context, &clients, token);
+        return;
+    }
 
     // println!("DEBUG: Message received: {:?}", &buffer[..buff_size]);
 
-    let mut offset = 2;
+    let buffer_size = u16::from_le_bytes(size_bytes) as usize;
 
-    while offset < buff_size {
-        if buffer[offset] == 0x3 {
-            let direction = match buffer[offset + 1] {
+    if buffer_size == 0 {
+        eprintln!("WARN: Empty packet received from {snake_id}");
+        return;
+    }
+
+    let mut buffer = vec![0; buffer_size];
+
+    if let Err(err) = client.read_exact(&mut buffer) {
+        eprintln!("ERROR: Failed to read from TCP Stream (buffer) {snake_id}: {err}");
+        return;
+    }
+
+    let mut packet = ReadablePacket::from_bytes(&buffer);
+
+    match packet.r#type {
+        PacketType::DirectionUpdate => {
+            let direction = match packet.read() {
                 0x1 => Some(Direction::Up),
                 0x2 => Some(Direction::Down),
                 0x3 => Some(Direction::Left),
                 0x4 => Some(Direction::Right),
                 _ => None,
             };
-
             if let Some(direction) = direction {
                 let mut context = context.write().unwrap();
 
@@ -178,10 +177,11 @@ fn client_read(
                     .unwrap()
                     .change_direction(direction);
             }
+        },
+        _ => {
+            eprintln!("WARN: Invalid packet type received from {snake_id}");
         }
-
-        offset += 2;
-    }
+    };
 }
 
 fn send_fullstate(
@@ -192,8 +192,7 @@ fn send_fullstate(
     let context = Arc::clone(context);
     let context = context.read().unwrap();
 
-    let mut packet = Packet::new();
-    packet.write(0x1);
+    let mut packet = PacketBuilder::new(PacketType::Info);
     packet.write(snake_id);
 
     for (id, snake) in context.snakes.iter() {
@@ -219,7 +218,7 @@ fn send_fullstate(
 
     // println!("DEBUG: Sending initial packet: {:?}", packet);
 
-    stream.write_all(packet)?;
+    stream.write_all(&packet)?;
 
     Ok(())
 }
@@ -229,8 +228,7 @@ fn broadcast_snake(
     snake_id: u8,
     snake: &Snake,
 ) {
-    let mut packet = Packet::with_capacity(6);
-    packet.write(0x5);
+    let mut packet = PacketBuilder::with_capacity(PacketType::SnakeConnect, 5);
     packet.write(snake_id);
     packet.write_u16_le(snake.body.len() as u16 + 1);
 
@@ -250,7 +248,7 @@ fn broadcast_snake(
         }
 
         // println!("DEBUG: Sending packet {:?}", packet);
-        let _ = client.write_all(packet);
+        let _ = client.write_all(&packet);
     }
 }
 
