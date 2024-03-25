@@ -9,7 +9,10 @@ use std::{
     time::Duration,
 };
 
-use common::{packet::{PacketBuilder, PacketType, ReadablePacket}, util::Point};
+use common::{
+    packet::{PacketBuilder, PacketType, ReadablePacket},
+    util::Point,
+};
 use game::Snake;
 use mio::{
     net::{TcpListener, TcpStream},
@@ -175,7 +178,7 @@ fn client_read(
                     .unwrap()
                     .change_direction(direction);
             }
-        },
+        }
         _ => {
             eprintln!("WARN: Invalid packet type received from {snake_id}");
         }

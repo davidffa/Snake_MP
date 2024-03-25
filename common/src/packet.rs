@@ -18,14 +18,14 @@ impl PacketBuilder {
     pub fn new(r#type: PacketType) -> Self {
         Self {
             r#type,
-            buffer: Vec::new()
+            buffer: Vec::new(),
         }
     }
 
     pub fn with_capacity(r#type: PacketType, capacity: usize) -> Self {
         Self {
             r#type,
-            buffer: Vec::with_capacity(capacity)
+            buffer: Vec::with_capacity(capacity),
         }
     }
 
@@ -75,7 +75,7 @@ impl ReadablePacket {
             0x5 => PacketType::SnakeConnect,
             0x6 => PacketType::SnakeDisconnect,
             0x7 => PacketType::ConnRejected,
-            _ => panic!("Unknown packet type")
+            _ => panic!("Unknown packet type"),
         };
 
         Self {

@@ -8,7 +8,10 @@ use std::{
     net::TcpStream,
 };
 
-use common::{packet::{PacketBuilder, PacketType, ReadablePacket}, util::Point};
+use common::{
+    packet::{PacketBuilder, PacketType, ReadablePacket},
+    util::Point,
+};
 use game::{Direction, GameContext, Snake};
 use renderer::{Renderer, WINDOW_HEIGHT, WINDOW_WIDTH};
 use sdl2::{event::Event, keyboard::Keycode};
